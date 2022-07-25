@@ -3,6 +3,7 @@ pub struct Node<T> {
     pub nodes: Vec<Node<T>>,
     pub key: String,
     pub handler: Option<T>,
+    pub wildcard: bool,
 }
 
 impl<T> Node<T> {
@@ -12,6 +13,7 @@ impl<T> Node<T> {
             nodes: Vec::new(),
             key: String::from(key),
             handler: None,
+            wildcard: key.starts_with("{") && key.ends_with("}"),
         }
     }
 
@@ -21,10 +23,11 @@ impl<T> Node<T> {
             Some((root, "")) => {
                 self.key = String::from(root);
                 self.handler = Some(f);
+                self.wildcard = root.starts_with("{") && root.ends_with("}");
             }
             Some(("", path)) => self.insert(path, f),
             Some((root, path)) => {
-                let node = self.nodes.iter_mut().find(|m| root == &m.key);
+                let node = self.nodes.iter_mut().find(|m| root == &m.key || m.wildcard);
                 match node {
                     Some(n) => n.insert(path, f),
                     None => {
@@ -45,7 +48,7 @@ impl<T> Node<T> {
     pub fn get(&self, path: &str) -> Option<&T> {
         match path.split_once('/') {
             Some((root, "")) => {
-                if root == &self.key {
+                if root == &self.key || self.wildcard {
                     self.handler.as_ref()
                 } else {
                     None
@@ -53,7 +56,7 @@ impl<T> Node<T> {
             }
             Some(("", path)) => self.get(path),
             Some((root, path)) => {
-                let node = self.nodes.iter().find(|m| root == &m.key);
+                let node = self.nodes.iter().find(|m| root == &m.key || m.wildcard);
                 if let Some(node) = node {
                     node.get(path)
                 } else {
@@ -61,7 +64,7 @@ impl<T> Node<T> {
                 }
             }
             None => {
-                let node = self.nodes.iter().find(|m| path == &m.key);
+                let node = self.nodes.iter().find(|m| path == &m.key || m.wildcard);
                 if let Some(node) = node {
                     node.handler.as_ref()
                 } else {
