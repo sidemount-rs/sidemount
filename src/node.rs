@@ -45,6 +45,7 @@ impl<T> Node<T> {
         }
     }
 
+    /// Gets a borrowed reference to the handler along the path
     pub fn get(&self, path: &str) -> Option<&T> {
         match path.split_once('/') {
             Some((root, "")) => {
@@ -67,6 +68,36 @@ impl<T> Node<T> {
                 let node = self.nodes.iter().find(|m| path == &m.key || m.wildcard);
                 if let Some(node) = node {
                     node.handler.as_ref()
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// Gets a mutable reference to the handler along the path
+    pub fn get_mut(&mut self, path: &str) -> Option<&mut T> {
+        match path.split_once('/') {
+            Some((root, "")) => {
+                if root == &self.key || self.wildcard {
+                    self.handler.as_mut()
+                } else {
+                    None
+                }
+            }
+            Some(("", path)) => self.get_mut(path),
+            Some((root, path)) => {
+                let node = self.nodes.iter_mut().find(|m| root == &m.key || m.wildcard);
+                if let Some(node) = node {
+                    node.get_mut(path)
+                } else {
+                    None
+                }
+            }
+            None => {
+                let node = self.nodes.iter_mut().find(|m| path == &m.key || m.wildcard);
+                if let Some(node) = node {
+                    node.handler.as_mut()
                 } else {
                     None
                 }
