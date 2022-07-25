@@ -1,0 +1,15 @@
+[package]
+name = "sidemount"
+version = "0.0.1"
+authors = ["Thomas Holloway <nyxtom@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+description = "Sidemount is a streamlined http/web toolkit designed for building async network apps in Rust"
+homepage = "https://github.com/sidemount-rs/sidemount"
+repository = "https://github.com/sidemount-rs/sidemount"
+keywords = ["web", "tcp", "http", "udp", "networking"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
