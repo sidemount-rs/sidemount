@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Node<T> {
     pub nodes: Vec<Node<T>>,
     pub key: String,
@@ -70,14 +71,18 @@ impl<T> Node<T> {
         }
     }
 }
-/*
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[derive(Debug)]
+    pub struct Request {}
+    pub type HandlerFn = fn(Request) -> Result<(), std::io::Error>;
+
     #[test]
     fn test_insert_routes() {
-        let mut root = Node::new("");
+        let mut root = Node::<HandlerFn>::new("");
         root.insert("/", |_| Ok(()));
         root.insert("/foo", |_| Ok(()));
         root.insert("/foo/bar", |_| Ok(()));
@@ -89,7 +94,7 @@ mod tests {
     fn test_get_route() {
         println!("{:?}", "foo".split_once('/'));
         println!("{:?}", "".split_once('/'));
-        let mut root = Node::new("");
+        let mut root = Node::<HandlerFn>::new("");
         root.insert("/", |_| Ok(()));
         root.insert("/foo/bar", |_| Ok(()));
         root.insert("/foo/foo", |_| Ok(()));
@@ -112,4 +117,3 @@ mod tests {
         println!("{:?}", root);
     }
 }
-*/
