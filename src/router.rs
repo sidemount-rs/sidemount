@@ -31,6 +31,12 @@ pub enum Method {
     DELETE,
 }
 
+pub enum RouteResult<T> {
+    NotFound,
+    MethodNotAllowed,
+    Found(T),
+}
+
 pub trait Handler: 'static {
     fn call(&self);
 }
@@ -39,11 +45,13 @@ pub trait Handler: 'static {
 pub trait Router<T: Route> {
     fn insert(&mut self, method: Method, path: &str, handler: impl Handler);
     fn at(&mut self, path: &str) -> &mut T;
+    fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler>;
 }
 
 /// Represents a route builder that keys off of HTTP methods.
 pub trait Route {
     fn method(&mut self, method: Method, handler: impl Handler);
+    fn all(&mut self, handler: impl Handler);
     fn get(&mut self, handler: impl Handler);
     fn post(&mut self, handler: impl Handler);
     fn put(&mut self, handler: impl Handler);
@@ -52,12 +60,18 @@ pub trait Route {
 
 #[derive(Default)]
 pub struct NodeRoute {
-    pub methods: HashMap<Method, Pin<Box<dyn Handler>>>,
+    methods: HashMap<Method, Pin<Box<dyn Handler>>>,
+    _all: Option<Pin<Box<dyn Handler>>>,
 }
 
 impl Route for NodeRoute {
     fn method(&mut self, method: Method, handler: impl Handler) {
         self.methods.insert(method, Box::pin(handler));
+        self._all = None;
+    }
+    fn all(&mut self, handler: impl Handler) {
+        self.methods.clear();
+        self._all = Some(Box::pin(handler));
     }
     fn get(&mut self, handler: impl Handler) {
         self.method(Method::GET, handler);
@@ -94,6 +108,20 @@ impl Router<NodeRoute> for NodeRouter {
             let mut node = NodeRoute::default();
             node.methods.insert(method, Box::pin(handler));
             self.route.insert(path, node);
+        }
+    }
+
+    fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler> {
+        if let Some(node) = self.route.get(path) {
+            if let Some(handler) = &node._all {
+                RouteResult::Found(&**handler)
+            } else if let Some(handler) = node.methods.get(&method) {
+                RouteResult::Found(&**handler)
+            } else {
+                RouteResult::MethodNotAllowed
+            }
+        } else {
+            RouteResult::NotFound
         }
     }
 }
