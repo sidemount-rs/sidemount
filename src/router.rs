@@ -73,7 +73,7 @@ pub trait Handler: 'static {
 /// Represents a router that can build and handle [Route] handler implementations.
 pub trait Router<T: Route> {
     fn at(&mut self, path: &str) -> &mut T;
-    fn with(&mut self, handler: impl Handler);
+    fn mount(&mut self, handler: impl Handler);
     fn insert(&mut self, method: Method, path: &str, handler: impl Handler);
     fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler>;
 }
@@ -119,14 +119,14 @@ impl Route for NodeRoute {
 
 pub struct NodeRouter {
     route: Node<NodeRoute>,
-    middleware: Option<Arc<dyn Handler>>,
+    middleware: Arc<Vec<Arc<dyn Handler>>>,
 }
 
 impl NodeRouter {
     pub fn new() -> Self {
         NodeRouter {
             route: Node::new("/"),
-            middleware: None,
+            middleware: Arc::new(Vec::new()),
         }
     }
 }
@@ -141,8 +141,10 @@ impl Router<NodeRoute> for NodeRouter {
         self.route.get_mut(path).unwrap()
     }
 
-    fn with(&mut self, handler: impl Handler) {
-        self.middleware = Some(Arc::new(handler));
+    fn mount(&mut self, handler: impl Handler) {
+        if let Some(mid) = Arc::get_mut(&mut self.middleware) {
+            mid.push(Arc::new(handler));
+        }
     }
 
     fn insert(&mut self, method: Method, path: &str, handler: impl Handler) {
@@ -211,13 +213,15 @@ mod tests {
 
     fn tester2() {}
 
-    fn tester3() {}
-
     #[test]
     fn test_router() {
         let mut router = NodeRouter::new();
-        router.with((tester, tester2, tester3));
+        router.mount((tester, tester2));
+        router.mount(tester2);
         router.at("/foo/bar").get(tester);
         router.at("/foo/bar/baz").get((tester, tester2));
+
+        assert!(router.find("/foo/bar", Method::GET).is_found());
+        assert!(router.find("/foo/bar/baz", Method::GET).is_found());
     }
 }
