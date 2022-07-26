@@ -81,11 +81,9 @@ impl Route {
     /// Inserts a handler implementation on the given HTTP method.
     pub fn method(&mut self, method: Method, handler: impl Handler) {
         self.methods.insert(method, Arc::new(handler));
-        self._all = None;
     }
     /// Inserts a handler implementation on the all HTTP methods.
     pub fn all(&mut self, handler: impl Handler) {
-        self.methods.clear();
         self._all = Some(Arc::new(handler));
     }
     /// Inserts a handler implementation on the GET HTTP method.
