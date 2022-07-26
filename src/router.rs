@@ -1,4 +1,4 @@
-use std::{collections::HashMap, pin::Pin};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::node::Node;
 
@@ -29,6 +29,19 @@ pub enum Method {
     POST,
     PUT,
     DELETE,
+    UNSUPPORTED,
+}
+
+impl From<&str> for Method {
+    fn from(method: &str) -> Self {
+        match method {
+            "GET" => Method::GET,
+            "POST" => Method::POST,
+            "PUT" => Method::PUT,
+            "DELETE" => Method::DELETE,
+            _ => Method::UNSUPPORTED,
+        }
+    }
 }
 
 pub enum RouteResult<T> {
@@ -60,18 +73,18 @@ pub trait Route {
 
 #[derive(Default)]
 pub struct NodeRoute {
-    methods: HashMap<Method, Pin<Box<dyn Handler>>>,
-    _all: Option<Pin<Box<dyn Handler>>>,
+    methods: HashMap<Method, Arc<dyn Handler>>,
+    _all: Option<Arc<dyn Handler>>,
 }
 
 impl Route for NodeRoute {
     fn method(&mut self, method: Method, handler: impl Handler) {
-        self.methods.insert(method, Box::pin(handler));
+        self.methods.insert(method, Arc::new(handler));
         self._all = None;
     }
     fn all(&mut self, handler: impl Handler) {
         self.methods.clear();
-        self._all = Some(Box::pin(handler));
+        self._all = Some(Arc::new(handler));
     }
     fn get(&mut self, handler: impl Handler) {
         self.method(Method::GET, handler);
@@ -103,10 +116,10 @@ impl Router<NodeRoute> for NodeRouter {
 
     fn insert(&mut self, method: Method, path: &str, handler: impl Handler) {
         if let Some(node) = self.route.get_mut(path) {
-            node.methods.insert(method, Box::pin(handler));
+            node.method(method, handler);
         } else {
             let mut node = NodeRoute::default();
-            node.methods.insert(method, Box::pin(handler));
+            node.method(method, handler);
             self.route.insert(path, node);
         }
     }
