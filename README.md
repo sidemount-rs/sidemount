@@ -1,7 +1,19 @@
 # sidemount
 🏕 sidemount 🤿 🏝⏛ is a streamlined http/web toolkit designed for building async network apps in Rust 🦀
 
-## Examples
+```rust
+fn index() {}
+fn authorize() {}
+
+#[tokio::main]
+async fn main() {
+    let mut app = sidemount::new();
+    app.mount(authorize);
+    app.at("/foo").get(index);
+
+    app.listen("127.0.0.1:7000").await
+}
+```
 
 ### Routing
 
