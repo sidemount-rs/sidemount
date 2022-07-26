@@ -13,6 +13,12 @@ impl<T> Default for Node<T> {
     }
 }
 
+/// Determines if the given path key is a simple wildcard capture
+fn is_wildcard<T: AsRef<str>>(key: T) -> bool {
+    let key = key.as_ref();
+    key.starts_with("{") && key.ends_with("}")
+}
+
 impl<T> Node<T> {
     /// Creates a new node with the given path argument.
     pub fn new(key: &str) -> Self {
@@ -20,7 +26,7 @@ impl<T> Node<T> {
             nodes: Vec::new(),
             key: String::from(key),
             handler: None,
-            wildcard: key.starts_with("{") && key.ends_with("}"),
+            wildcard: is_wildcard(key),
         }
     }
 
@@ -30,7 +36,7 @@ impl<T> Node<T> {
             Some((root, "")) => {
                 self.key = String::from(root);
                 self.handler = Some(f);
-                self.wildcard = root.starts_with("{") && root.ends_with("}");
+                self.wildcard = is_wildcard(root);
             }
             Some(("", path)) => self.insert(path, f),
             Some((root, path)) => {
@@ -64,7 +70,7 @@ impl<T> Node<T> {
             Some((root, "")) => {
                 *self = node;
                 self.key = String::from(root);
-                self.wildcard = root.starts_with("{") && root.ends_with("}");
+                self.wildcard = is_wildcard(root);
             }
             Some(("", path)) => self.insert_node(path, node),
             Some((root, path)) => {
