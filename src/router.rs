@@ -74,6 +74,7 @@ pub trait Handler: 'static {
 pub trait Router<T: Route> {
     fn at(&mut self, path: &str) -> &mut T;
     fn mount(&mut self, handler: impl Handler);
+    fn route(&mut self, path: &str, router: Self);
     fn insert(&mut self, method: Method, path: &str, handler: impl Handler);
     fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler>;
 }
@@ -157,6 +158,10 @@ impl Router<NodeRoute> for NodeRouter {
         }
     }
 
+    fn route(&mut self, path: &str, router: NodeRouter) {
+        self.route.insert_node(path, router.route);
+    }
+
     fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler> {
         if let Some(node) = self.route.get(path) {
             if let Some(handler) = &node._all {
@@ -214,6 +219,13 @@ mod tests {
         router.at("/foo/bar").get(tester);
         router.at("/foo/bar/baz").get((tester, tester2));
 
+        let mut sub_router = NodeRouter::new();
+        sub_router.at("/bleh").get(tester);
+        sub_router.at("/foo/bar").post(tester);
+        router.route("/hi", sub_router);
+
+        assert!(router.find("/hi/bleh", Method::GET).is_found());
+        assert!(router.find("/hi/foo/bar", Method::POST).is_found());
         assert!(router.find("/foo/bar", Method::GET).is_found());
         assert!(router.find("/foo/bar/baz", Method::GET).is_found());
     }

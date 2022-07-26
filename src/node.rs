@@ -45,6 +45,34 @@ impl<T> Node<T> {
         }
     }
 
+    pub fn insert_node(&mut self, path: &str, node: Node<T>) {
+        match path.split_once('/') {
+            Some((root, "")) => {
+                *self = node;
+                self.key = String::from(root);
+                self.wildcard = root.starts_with("{") && root.ends_with("}");
+            }
+            Some(("", path)) => self.insert_node(path, node),
+            Some((root, path)) => {
+                println!("split into {}, {}", root, path);
+                let parent = self.nodes.iter_mut().find(|m| root == &m.key || m.wildcard);
+                match parent {
+                    Some(n) => n.insert_node(path, node),
+                    None => {
+                        let mut parent = Node::new(root);
+                        parent.insert_node(path, node);
+                        self.nodes.push(parent);
+                    }
+                }
+            }
+            None => {
+                let mut parent = Node::new(path);
+                parent.nodes = node.nodes;
+                self.nodes.push(parent);
+            }
+        }
+    }
+
     /// Gets a borrowed reference to the handler along the path
     pub fn get(&self, path: &str) -> Option<&T> {
         match path.split_once('/') {
@@ -150,14 +178,10 @@ mod tests {
         root.insert("/", |_| Ok(()));
         root.insert("/foo", |_| Ok(()));
         root.insert("/foo/bar", |_| Ok(()));
-
-        println!("{:?}", root);
     }
 
     #[test]
     fn test_get_route() {
-        println!("{:?}", "foo".split_once('/'));
-        println!("{:?}", "".split_once('/'));
         let mut root = Node::<HandlerFn>::new("");
         root.insert("/", |_| Ok(()));
         root.insert("/foo/bar", |_| Ok(()));
@@ -177,7 +201,5 @@ mod tests {
         assert!(root.get("/companies/1234/asdf").is_none());
         assert!(root.get("/companies/1234/users").is_none());
         assert!(root.get("/companies/1234/users/foo").is_some());
-
-        println!("{:?}", root);
     }
 }
