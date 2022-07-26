@@ -70,82 +70,72 @@ pub trait Handler: 'static {
     fn call(&self);
 }
 
-/// Represents a router that can build and handle [Route] handler implementations.
-pub trait Router<T: Route> {
-    fn at(&mut self, path: &str) -> &mut T;
-    fn mount(&mut self, handler: impl Handler);
-    fn route(&mut self, path: &str, router: Self);
-    fn insert(&mut self, method: Method, path: &str, handler: impl Handler);
-    fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler>;
-}
-
 /// Represents a route builder that keys off of HTTP methods.
-pub trait Route {
-    fn method(&mut self, method: Method, handler: impl Handler);
-    fn all(&mut self, handler: impl Handler);
-    fn get(&mut self, handler: impl Handler);
-    fn post(&mut self, handler: impl Handler);
-    fn put(&mut self, handler: impl Handler);
-    fn delete(&mut self, handler: impl Handler);
-}
-
 #[derive(Default)]
-pub struct NodeRoute {
+pub struct Route {
     methods: HashMap<Method, Arc<dyn Handler>>,
     _all: Option<Arc<dyn Handler>>,
 }
 
-impl Route for NodeRoute {
-    fn method(&mut self, method: Method, handler: impl Handler) {
+impl Route {
+    /// Inserts a handler implementation on the given HTTP method.
+    pub fn method(&mut self, method: Method, handler: impl Handler) {
         self.methods.insert(method, Arc::new(handler));
         self._all = None;
     }
-    fn all(&mut self, handler: impl Handler) {
+    /// Inserts a handler implementation on the all HTTP methods.
+    pub fn all(&mut self, handler: impl Handler) {
         self.methods.clear();
         self._all = Some(Arc::new(handler));
     }
-    fn get(&mut self, handler: impl Handler) {
+    /// Inserts a handler implementation on the GET HTTP method.
+    pub fn get(&mut self, handler: impl Handler) {
         self.method(Method::GET, handler);
     }
-    fn post(&mut self, handler: impl Handler) {
+    /// Inserts a handler implementation on the POST HTTP method.
+    pub fn post(&mut self, handler: impl Handler) {
         self.method(Method::POST, handler);
     }
-    fn put(&mut self, handler: impl Handler) {
+    /// Inserts a handler implementation on the PUT HTTP method.
+    pub fn put(&mut self, handler: impl Handler) {
         self.method(Method::PUT, handler);
     }
-    fn delete(&mut self, handler: impl Handler) {
+    /// Inserts a handler implementation on the DELETE HTTP method.
+    pub fn delete(&mut self, handler: impl Handler) {
         self.method(Method::DELETE, handler);
     }
 }
 
-pub struct NodeRouter {
-    route: Node<NodeRoute>,
+/// Represents a router that can build and handle [Route] handler implementations.
+pub struct Router {
+    route: Node<Route>,
     middleware: Arc<Vec<Arc<dyn Handler>>>,
 }
 
-impl NodeRouter {
+impl Router {
+    /// Creates a new router with the default route and middleware
     pub fn new() -> Self {
-        NodeRouter {
+        Router {
             route: Node::default(),
             middleware: Arc::new(Vec::new()),
         }
     }
-}
 
-impl Router<NodeRoute> for NodeRouter {
     /// Creates a new node route or returns a mutable reference to an existing one.
     ///
     /// ## Examples
     ///
     /// ```rust
+    /// use sidemount::*;
+    ///
     /// fn test() {}
     ///
-    /// let mut router = NodeRouter::new();
+    /// let mut router = Router::new();
     /// router.at("/foo").get(test);
     /// ```
-    fn at(&mut self, path: &str) -> &mut NodeRoute {
+    pub fn at(&mut self, path: &str) -> &mut Route {
         if let None = self.route.get_mut(path) {
-            let node = NodeRoute::default();
+            let node = Route::default();
             self.route.insert(path, node);
         }
 
@@ -158,15 +148,17 @@ impl Router<NodeRoute> for NodeRouter {
     /// ## Examples
     ///
     /// ```rust
+    /// use sidemount::*;
+    ///
     /// fn test() {}
     /// fn test2() {}
     /// fn index() {}
     ///
-    /// let mut router = NodeRouter::new();
+    /// let mut router = Router::new();
     /// router.mount((test, test2));
     /// router.at("/foo").get(index);
     /// ```
-    fn mount(&mut self, handler: impl Handler) {
+    pub fn mount(&mut self, handler: impl Handler) {
         if let Some(mid) = Arc::get_mut(&mut self.middleware) {
             mid.push(Arc::new(handler));
         }
@@ -176,17 +168,19 @@ impl Router<NodeRoute> for NodeRouter {
     ///
     /// ## Examples
     /// ```rust
+    /// use sidemount::*;
+    ///
     /// fn test() {}
     /// fn index() {}
     ///
-    /// let mut router = NodeRouter::new();
+    /// let mut router = Router::new();
     /// router.insert(Method::GET, "/foo/bar", (test, index));
     /// ```
-    fn insert(&mut self, method: Method, path: &str, handler: impl Handler) {
+    pub fn insert(&mut self, method: Method, path: &str, handler: impl Handler) {
         if let Some(node) = self.route.get_mut(path) {
             node.method(method, handler);
         } else {
-            let mut node = NodeRoute::default();
+            let mut node = Route::default();
             node.method(method, handler);
             self.route.insert(path, node);
         }
@@ -196,20 +190,22 @@ impl Router<NodeRoute> for NodeRouter {
     ///
     /// ## Examples
     /// ```rust
+    /// use sidemount::*;
+    ///
     /// fn security() {}
     /// fn settings() {}
     /// fn authenticated() {}
     ///
-    /// let mut router = NodeRouter::new();
+    /// let mut router = Router::new();
     ///
-    /// let mut manager = NodeRouter::new();
+    /// let mut manager = Router::new();
     /// manager.mount(authenticated);
     /// manager.at("/settings").get(settings);
     /// manager.at("/security").get(security);
     ///
-    /// router.at("/admin").route(manager);
+    /// router.route("/admin", manager);
     /// ```
-    fn route(&mut self, path: &str, router: NodeRouter) {
+    pub fn route(&mut self, path: &str, router: Router) {
         self.route.insert_node(path, router.route);
     }
 
@@ -217,10 +213,12 @@ impl Router<NodeRoute> for NodeRouter {
     ///
     /// ## Examples
     /// ```rust
+    /// use sidemount::*;
+    ///
     /// fn index() {}
     /// fn foo() {}
     ///
-    /// let mut router = NodeRouter::new();
+    /// let mut router = Router::new();
     /// router.at("/foo/bar").get(index);
     /// router.at("/foo").get(foo);
     ///
@@ -229,7 +227,7 @@ impl Router<NodeRoute> for NodeRouter {
     /// assert!(router.find("/foo", Method::GET).is_found());
     /// assert!(router.find("/foo", Method::POST).is_not_allowed());
     /// ```
-    fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler> {
+    pub fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler> {
         if let Some(node) = self.route.get(path) {
             if let Some(handler) = &node._all {
                 RouteResult::Found(&**handler)
@@ -248,6 +246,8 @@ impl Router<NodeRoute> for NodeRouter {
 ///
 /// ## Examples
 /// ```rust
+/// use sidemount::Handler;
+///
 /// fn assert_impl_handler(f: impl Handler) {}
 ///
 /// fn test() {}
@@ -269,6 +269,8 @@ where
 ///
 /// ## Examples
 /// ```rust
+/// use sidemount::Handler;
+///
 /// fn assert_impl_handler(f: impl Handler) {}
 ///
 /// fn test() {}
@@ -291,13 +293,19 @@ where
 ///
 /// ## Examples
 /// ```rust
+/// use std::sync::Arc;
+/// use sidemount::Handler;
+///
 /// fn assert_impl_handler(f: impl Handler) {}
 ///
 /// fn test() {}
 ///
 /// assert_impl_handler(Arc::new(test));
 /// ```
-impl Handler for Arc<dyn Handler> {
+impl<T> Handler for Arc<T>
+where
+    T: Handler,
+{
     fn call(&self) {
         self.as_ref().call();
     }
@@ -313,13 +321,13 @@ mod tests {
 
     #[test]
     fn test_router() {
-        let mut router = NodeRouter::new();
+        let mut router = Router::new();
         router.mount((tester, tester2));
         router.mount(tester2);
         router.at("/foo/bar").get(tester);
         router.at("/foo/bar/baz").get((tester, tester2));
 
-        let mut sub_router = NodeRouter::new();
+        let mut sub_router = Router::new();
         sub_router.at("/bleh").get(tester);
         sub_router.at("/foo/bar").post(tester);
         router.route("/hi", sub_router);
