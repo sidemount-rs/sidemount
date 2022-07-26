@@ -308,6 +308,17 @@ ary! { A B C D E F G H I J K L }
 ary! { A B C D E F G H I J K L M }
 ary! { A B C D E F G H I J K L M N }
 ary! { A B C D E F G H I J K L M N O }
+ary! { A B C D E F G H I J K L M N O P }
+ary! { A B C D E F G H I J K L M N O P Q }
+ary! { A B C D E F G H I J K L M N O P Q R }
+ary! { A B C D E F G H I J K L M N O P Q R S }
+ary! { A B C D E F G H I J K L M N O P Q R S T }
+ary! { A B C D E F G H I J K L M N O P Q R S T U }
+ary! { A B C D E F G H I J K L M N O P Q R S T U V }
+ary! { A B C D E F G H I J K L M N O P Q R S T U V W }
+ary! { A B C D E F G H I J K L M N O P Q R S T U V W X }
+ary! { A B C D E F G H I J K L M N O P Q R S T U V W X Y }
+ary! { A B C D E F G H I J K L M N O P Q R S T U V W X Y Z }
 
 /// Default handler implementation for an Arc handler.
 ///
