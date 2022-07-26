@@ -1,4 +1,4 @@
-use std::{collections::HashMap, pin::Pin, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::node::Node;
 
@@ -126,13 +126,23 @@ pub struct NodeRouter {
 impl NodeRouter {
     pub fn new() -> Self {
         NodeRouter {
-            route: Node::new("/"),
+            route: Node::default(),
             middleware: Arc::new(Vec::new()),
         }
     }
 }
 
 impl Router<NodeRoute> for NodeRouter {
+    /// Creates a new node route or returns a mutable reference to an existing one.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// fn test() {}
+    ///
+    /// let mut router = NodeRouter::new();
+    /// router.at("/foo").get(test);
+    /// ```
     fn at(&mut self, path: &str) -> &mut NodeRoute {
         if let None = self.route.get_mut(path) {
             let node = NodeRoute::default();
@@ -142,12 +152,36 @@ impl Router<NodeRoute> for NodeRouter {
         self.route.get_mut(path).unwrap()
     }
 
+    /// Mounts a handler implementation as middleware to be optionally executed with
+    /// each of the routes once a route has been found.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// fn test() {}
+    /// fn test2() {}
+    /// fn index() {}
+    ///
+    /// let mut router = NodeRouter::new();
+    /// router.mount((test, test2));
+    /// router.at("/foo").get(index);
+    /// ```
     fn mount(&mut self, handler: impl Handler) {
         if let Some(mid) = Arc::get_mut(&mut self.middleware) {
             mid.push(Arc::new(handler));
         }
     }
 
+    /// Inserts a route handler for the given path and HTTP method
+    ///
+    /// ## Examples
+    /// ```rust
+    /// fn test() {}
+    /// fn index() {}
+    ///
+    /// let mut router = NodeRouter::new();
+    /// router.insert(Method::GET, "/foo/bar", (test, index));
+    /// ```
     fn insert(&mut self, method: Method, path: &str, handler: impl Handler) {
         if let Some(node) = self.route.get_mut(path) {
             node.method(method, handler);
@@ -158,10 +192,43 @@ impl Router<NodeRoute> for NodeRouter {
         }
     }
 
+    /// Routes a path on the router to an existing router implementation.
+    ///
+    /// ## Examples
+    /// ```rust
+    /// fn security() {}
+    /// fn settings() {}
+    /// fn authenticated() {}
+    ///
+    /// let mut router = NodeRouter::new();
+    ///
+    /// let mut manager = NodeRouter::new();
+    /// manager.mount(authenticated);
+    /// manager.at("/settings").get(settings);
+    /// manager.at("/security").get(security);
+    ///
+    /// router.at("/admin").route(manager);
+    /// ```
     fn route(&mut self, path: &str, router: NodeRouter) {
         self.route.insert_node(path, router.route);
     }
 
+    /// Finds a route result along the given path and method.
+    ///
+    /// ## Examples
+    /// ```rust
+    /// fn index() {}
+    /// fn foo() {}
+    ///
+    /// let mut router = NodeRouter::new();
+    /// router.at("/foo/bar").get(index);
+    /// router.at("/foo").get(foo);
+    ///
+    /// assert!(!router.find("/foo/bar/bas", Method::GET).is_found());
+    /// assert!(router.find("/foo/bar", Method::GET).is_found());
+    /// assert!(router.find("/foo", Method::GET).is_found());
+    /// assert!(router.find("/foo", Method::POST).is_not_allowed());
+    /// ```
     fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler> {
         if let Some(node) = self.route.get(path) {
             if let Some(handler) = &node._all {
@@ -177,6 +244,18 @@ impl Router<NodeRoute> for NodeRouter {
     }
 }
 
+/// Default handler implementation for a function
+///
+/// ## Examples
+/// ```rust
+/// fn assert_impl_handler(f: impl Handler) {}
+///
+/// fn test() {}
+/// fn test2() {}
+///
+/// assert_impl_handler(test);
+/// assert_impl_handler(test2);
+/// ```
 impl<Func> Handler for Func
 where
     Func: Fn() + 'static,
@@ -186,6 +265,17 @@ where
     }
 }
 
+/// Default handler implementation for a tuple of handlers.
+///
+/// ## Examples
+/// ```rust
+/// fn assert_impl_handler(f: impl Handler) {}
+///
+/// fn test() {}
+/// fn test2() {}
+///
+/// assert_impl_handler((test, test2));
+/// ```
 impl<A, B> Handler for (A, B)
 where
     A: Handler,
@@ -197,6 +287,16 @@ where
     }
 }
 
+/// Default handler implementation for an Arc handler.
+///
+/// ## Examples
+/// ```rust
+/// fn assert_impl_handler(f: impl Handler) {}
+///
+/// fn test() {}
+///
+/// assert_impl_handler(Arc::new(test));
+/// ```
 impl Handler for Arc<dyn Handler> {
     fn call(&self) {
         self.as_ref().call();

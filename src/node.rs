@@ -6,6 +6,13 @@ pub struct Node<T> {
     pub wildcard: bool,
 }
 
+/// Default implementation for node with a "/" at the root path
+impl<T> Default for Node<T> {
+    fn default() -> Self {
+        Node::new("/")
+    }
+}
+
 impl<T> Node<T> {
     /// Creates a new node with the given path argument.
     pub fn new(key: &str) -> Self {
@@ -45,6 +52,7 @@ impl<T> Node<T> {
         }
     }
 
+    /// Inserts a new path and associated node structure along the node tree.
     pub fn insert_node(&mut self, path: &str, node: Node<T>) {
         match path.split_once('/') {
             Some((root, "")) => {
@@ -126,36 +134,6 @@ impl<T> Node<T> {
                 let node = self.nodes.iter_mut().find(|m| path == &m.key || m.wildcard);
                 if let Some(node) = node {
                     node.handler.as_mut()
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
-    /// Gets a mutable reference to the handler along the path
-    pub fn get_mut_node(&mut self, path: &str) -> Option<&mut Node<T>> {
-        match path.split_once('/') {
-            Some((root, "")) => {
-                if root == &self.key || self.wildcard {
-                    Some(self)
-                } else {
-                    None
-                }
-            }
-            Some(("", path)) => self.get_mut_node(path),
-            Some((root, path)) => {
-                let node = self.nodes.iter_mut().find(|m| root == &m.key || m.wildcard);
-                if let Some(node) = node {
-                    node.get_mut_node(path)
-                } else {
-                    None
-                }
-            }
-            None => {
-                let node = self.nodes.iter_mut().find(|m| path == &m.key || m.wildcard);
-                if let Some(node) = node {
-                    Some(node)
                 } else {
                     None
                 }
