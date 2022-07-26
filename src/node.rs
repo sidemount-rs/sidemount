@@ -45,9 +45,15 @@ impl<T> Node<T> {
                 }
             }
             None => {
-                let mut node = Node::new(path);
-                node.handler = Some(f);
-                self.nodes.push(node);
+                let node = self.nodes.iter_mut().find(|m| path == &m.key || m.wildcard);
+                match node {
+                    Some(n) => n.handler = Some(f),
+                    None => {
+                        let mut node = Node::new(path);
+                        node.handler = Some(f);
+                        self.nodes.push(node);
+                    }
+                }
             }
         }
     }
@@ -62,7 +68,6 @@ impl<T> Node<T> {
             }
             Some(("", path)) => self.insert_node(path, node),
             Some((root, path)) => {
-                println!("split into {}, {}", root, path);
                 let parent = self.nodes.iter_mut().find(|m| root == &m.key || m.wildcard);
                 match parent {
                     Some(n) => n.insert_node(path, node),
@@ -74,9 +79,15 @@ impl<T> Node<T> {
                 }
             }
             None => {
-                let mut parent = Node::new(path);
-                parent.nodes = node.nodes;
-                self.nodes.push(parent);
+                let parent = self.nodes.iter_mut().find(|m| path == &m.key || m.wildcard);
+                match parent {
+                    Some(n) => n.nodes = node.nodes,
+                    None => {
+                        let mut parent = Node::new(path);
+                        parent.nodes = node.nodes;
+                        self.nodes.push(parent);
+                    }
+                }
             }
         }
     }
@@ -154,8 +165,11 @@ mod tests {
     fn test_insert_routes() {
         let mut root = Node::<HandlerFn>::new("");
         root.insert("/", |_| Ok(()));
-        root.insert("/foo", |_| Ok(()));
         root.insert("/foo/bar", |_| Ok(()));
+        root.insert("/foo", |_| Ok(()));
+        assert!(root.get("/foo").is_some());
+        assert!(root.get("/foo/bar").is_some());
+        assert!(root.get("/").is_some());
     }
 
     #[test]
