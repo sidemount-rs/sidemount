@@ -278,16 +278,35 @@ where
 ///
 /// assert_impl_handler((test, test2));
 /// ```
-impl<A, B> Handler for (A, B)
-where
-    A: Handler,
-    B: Handler,
-{
-    fn call(&self) {
-        self.0.call();
-        self.1.call();
-    }
+macro_rules! ary {
+    ($($name:ident)+) => (
+        impl<$($name),*> Handler for ($($name,)*)
+            where $($name: Handler),*
+        {
+            fn call(&self) {
+                let ($(ref $name,)*) = *self;
+                $(
+                    $name.call();
+                )*
+            }
+        }
+    );
 }
+
+ary! { A B }
+ary! { A B C }
+ary! { A B C D }
+ary! { A B C D E }
+ary! { A B C D E F }
+ary! { A B C D E F G }
+ary! { A B C D E F G H }
+ary! { A B C D E F G H I }
+ary! { A B C D E F G H I J }
+ary! { A B C D E F G H I J K }
+ary! { A B C D E F G H I J K L }
+ary! { A B C D E F G H I J K L M }
+ary! { A B C D E F G H I J K L M N }
+ary! { A B C D E F G H I J K L M N O }
 
 /// Default handler implementation for an Arc handler.
 ///

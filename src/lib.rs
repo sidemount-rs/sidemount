@@ -23,7 +23,7 @@ pub use server::*;
 /// }
 /// ```
 pub fn new() -> Server {
-    Server {}
+    Server::new()
 }
 
 /// Creates a new [Router] implementation using the default
