@@ -56,8 +56,9 @@ pub trait Handler: 'static {
 
 /// Represents a router that can build and handle [Route] handler implementations.
 pub trait Router<T: Route> {
-    fn insert(&mut self, method: Method, path: &str, handler: impl Handler);
     fn at(&mut self, path: &str) -> &mut T;
+    fn with(&mut self, handler: impl Handler);
+    fn insert(&mut self, method: Method, path: &str, handler: impl Handler);
     fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler>;
 }
 
@@ -102,6 +103,16 @@ impl Route for NodeRoute {
 
 pub struct NodeRouter {
     route: Node<NodeRoute>,
+    middleware: Option<Arc<dyn Handler>>,
+}
+
+impl NodeRouter {
+    pub fn new() -> Self {
+        NodeRouter {
+            route: Node::new("/"),
+            middleware: None,
+        }
+    }
 }
 
 impl Router<NodeRoute> for NodeRouter {
@@ -112,6 +123,10 @@ impl Router<NodeRoute> for NodeRouter {
         }
 
         self.route.get_mut(path).unwrap()
+    }
+
+    fn with(&mut self, handler: impl Handler) {
+        self.middleware = Some(Arc::new(handler));
     }
 
     fn insert(&mut self, method: Method, path: &str, handler: impl Handler) {
@@ -136,5 +151,57 @@ impl Router<NodeRoute> for NodeRouter {
         } else {
             RouteResult::NotFound
         }
+    }
+}
+
+impl<Func> Handler for Func
+where
+    Func: Fn() + 'static,
+{
+    fn call(&self) {
+        (self)();
+    }
+}
+
+impl<A, B> Handler for (A, B)
+where
+    A: Handler,
+    B: Handler,
+{
+    fn call(&self) {
+        self.0.call();
+        self.1.call();
+    }
+}
+
+impl<A, B, C> Handler for (A, B, C)
+where
+    A: Handler,
+    B: Handler,
+    C: Handler,
+{
+    fn call(&self) {
+        self.0.call();
+        self.1.call();
+        self.2.call();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tester() {}
+
+    fn tester2() {}
+
+    fn tester3() {}
+
+    #[test]
+    fn test_router() {
+        let mut router = NodeRouter::new();
+        router.with((tester, tester2, tester3));
+        router.at("/foo/bar").get(tester);
+        router.at("/foo/bar/baz").get((tester, tester2));
     }
 }

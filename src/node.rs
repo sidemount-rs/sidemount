@@ -104,6 +104,36 @@ impl<T> Node<T> {
             }
         }
     }
+
+    /// Gets a mutable reference to the handler along the path
+    pub fn get_mut_node(&mut self, path: &str) -> Option<&mut Node<T>> {
+        match path.split_once('/') {
+            Some((root, "")) => {
+                if root == &self.key || self.wildcard {
+                    Some(self)
+                } else {
+                    None
+                }
+            }
+            Some(("", path)) => self.get_mut_node(path),
+            Some((root, path)) => {
+                let node = self.nodes.iter_mut().find(|m| root == &m.key || m.wildcard);
+                if let Some(node) = node {
+                    node.get_mut_node(path)
+                } else {
+                    None
+                }
+            }
+            None => {
+                let node = self.nodes.iter_mut().find(|m| path == &m.key || m.wildcard);
+                if let Some(node) = node {
+                    Some(node)
+                } else {
+                    None
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
