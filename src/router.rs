@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, pin::Pin, sync::Arc};
 
 use crate::node::Node;
 
@@ -48,6 +48,22 @@ pub enum RouteResult<T> {
     NotFound,
     MethodNotAllowed,
     Found(T),
+}
+
+impl<T> RouteResult<T> {
+    pub fn is_found(&self) -> bool {
+        match self {
+            RouteResult::Found(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_not_allowed(&self) -> bool {
+        match self {
+            RouteResult::MethodNotAllowed => true,
+            _ => false,
+        }
+    }
 }
 
 pub trait Handler: 'static {
