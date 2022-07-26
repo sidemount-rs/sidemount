@@ -355,6 +355,7 @@ mod tests {
         router.mount(tester2);
         router.at("/foo/bar").get(tester);
         router.at("/foo/bar/baz").get((tester, tester2));
+        router.at("/bah").get((tester, Arc::new(tester2)));
 
         let mut sub_router = Router::new();
         sub_router.at("/bleh").get(tester);
