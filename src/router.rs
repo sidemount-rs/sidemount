@@ -192,16 +192,9 @@ where
     }
 }
 
-impl<A, B, C> Handler for (A, B, C)
-where
-    A: Handler,
-    B: Handler,
-    C: Handler,
-{
+impl Handler for Arc<dyn Handler> {
     fn call(&self) {
-        self.0.call();
-        self.1.call();
-        self.2.call();
+        self.as_ref().call();
     }
 }
 
