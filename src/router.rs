@@ -283,6 +283,7 @@ macro_rules! ary {
         impl<$($name),*> Handler for ($($name,)*)
             where $($name: Handler),*
         {
+            #[allow(non_snake_case)]
             fn call(&self) {
                 let ($(ref $name,)*) = *self;
                 $(
