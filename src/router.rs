@@ -27,7 +27,24 @@ pub enum Method {
     /// 416 (Range Not Satisfiable)).
     /// [ref](https://httpwg.org/specs/rfc7231.html#POST)
     POST,
+    /// The PUT method requests that the state of the target resource be created or
+    /// replaced with the state defined by the representation enclosed in the request
+    /// message payload. A successful PUT of a given representation would suggest that
+    /// a subsequent GET on that same target resource will result in an equivalent
+    /// representation being sent in a 200 (OK) response. However, there is no guarantee
+    /// that such a state change will be observable, since the target resource might be
+    /// acted upon by other user agents in parallel, or might be subject to dynamic
+    /// processing by the origin server, before any subsequent GET is received. A
+    /// successful response only implies that the user agent's intent was achieved at
+    /// the time of its processing by the origin server.
+    /// [ref](https://httpwg.org/specs/rfc7231.html#PUT)
     PUT,
+    /// The DELETE method requests that the origin server remove the association between
+    /// the target resource and its current functionality. In effect, this method is
+    /// similar to the rm command in UNIX: it expresses a deletion operation on the URI
+    /// mapping of the origin server rather than an expectation that the previously
+    /// associated information be deleted.
+    /// [ref](https://httpwg.org/specs/rfc7231.html#DELETE)
     DELETE,
     UNSUPPORTED,
 }
