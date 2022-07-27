@@ -10,13 +10,19 @@ fn authorize(req: Request) -> Result<Request> {
     }
 }
 
-fn user_request(req: Request) -> Result<(User, Request)> {
+fn user_request(req: Request) -> Result<(User, String, Db<Post>)> {
     let user_id = req.param("id");
     let user = // look up user by id
-    Ok((user, req))
+    let post_id = req.param("post_id");
+    Ok((user, post_id, db.posts()))
 }
 
-fn index(user: User, req: Request) -> Result<Template> {
+fn user_rbac<T>(user: User, id: String, model: Db<T>) -> Result<(User, T)> {
+    // rbac rule on id
+    Ok((user, model))
+}
+
+fn index(user: User, post: Post) -> Result<Template> {
     // guarantee parameters or bad request
 }
 
@@ -29,7 +35,7 @@ async fn main() {
     let mut app = sidemount::new();
     app.mount(authorize);
     app.mount(user_request);
-    app.at("/foo").get((index, template));
+    app.at("/foo").get((user_rbac, index, template));
 
     app.listen("127.0.0.1:7000").await
 }
