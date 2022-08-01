@@ -8,7 +8,7 @@ use hyper::service::Service;
 use hyper::{Body, Request, Response};
 use tokio::net::{TcpListener, ToSocketAddrs};
 
-use crate::{Handler, Route, RouteResult, Router};
+use crate::{Middleware, Route, RouteResult, Router};
 
 pub struct Server {
     router: Arc<Router>,
@@ -31,7 +31,7 @@ impl Server {
 
     /// Mounts a handler implementation as middleware to be optionally executed with
     /// each of the routes once a route has been found.
-    pub fn mount(&mut self, handler: impl Handler) {
+    pub fn mount(&mut self, handler: impl Middleware) {
         let router =
             Arc::get_mut(&mut self.router).expect("Cannot mount router after binding to listener");
         router.mount(handler);
