@@ -99,6 +99,10 @@ pub trait Handler: Sync + Send + 'static {
     fn call(&self);
 }
 
+pub trait Middleware: Sync + Send + 'static {
+    fn call(&self);
+}
+
 /// Represents a route builder that keys off of HTTP methods.
 #[derive(Default)]
 pub struct Route {
@@ -136,7 +140,7 @@ impl Route {
 /// Represents a router that can build and handle [Route] handler implementations.
 pub struct Router {
     route: Node<Route>,
-    middleware: Arc<Vec<Arc<dyn Handler>>>,
+    middleware: Arc<Vec<Arc<dyn Middleware>>>,
 }
 
 impl Router {
@@ -185,7 +189,7 @@ impl Router {
     /// router.mount((test, test2));
     /// router.at("/foo").get(index);
     /// ```
-    pub fn mount(&mut self, handler: impl Handler) {
+    pub fn mount(&mut self, handler: impl Middleware) {
         if let Some(mid) = Arc::get_mut(&mut self.middleware) {
             mid.push(Arc::new(handler));
         }
@@ -292,6 +296,29 @@ where
     }
 }
 
+/// Default middleware implementation for a function
+///
+/// ## Examples
+/// ```rust
+/// use sidemount::Middleware;
+///
+/// fn assert_impl_middlewar(f: impl Middleware) {}
+///
+/// fn test() {}
+/// fn test2() {}
+///
+/// assert_impl_middleware(test);
+/// assert_impl_middleware(test2);
+/// ```
+impl<Func> Middleware for Func
+where
+    Func: Fn() + Send + Sync + 'static,
+{
+    fn call(&self) {
+        (self)();
+    }
+}
+
 /// Default handler implementation for a tuple of handlers.
 ///
 /// ## Examples
@@ -309,6 +336,18 @@ macro_rules! ary {
     ($($name:ident)+) => (
         impl<$($name),*> Handler for ($($name,)*)
             where $($name: Handler),*
+        {
+            #[allow(non_snake_case)]
+            fn call(&self) {
+                let ($(ref $name,)*) = *self;
+                $(
+                    $name.call();
+                )*
+            }
+        }
+
+        impl<$($name),*> Middleware for ($($name,)*)
+            where $($name: Middleware),*
         {
             #[allow(non_snake_case)]
             fn call(&self) {
@@ -363,6 +402,28 @@ ary! { A B C D E F G H I J K L M N O P Q R S T U V W X Y Z }
 impl<T> Handler for Arc<T>
 where
     T: Handler,
+{
+    fn call(&self) {
+        self.as_ref().call();
+    }
+}
+
+/// Default middleware implementation for an Arc middleware.
+///
+/// ## Examples
+/// ```rust
+/// use std::sync::Arc;
+/// use sidemount::Middleware;
+///
+/// fn assert_impl_middleware(f: impl Middleware) {}
+///
+/// fn test() {}
+///
+/// assert_impl_middleware(Arc::new(test));
+/// ```
+impl<T> Middleware for Arc<T>
+where
+    T: Middleware,
 {
     fn call(&self) {
         self.as_ref().call();
