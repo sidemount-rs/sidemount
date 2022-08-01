@@ -61,6 +61,18 @@ impl From<&str> for Method {
     }
 }
 
+impl From<&hyper::Method> for Method {
+    fn from(m: &hyper::Method) -> Self {
+        match m {
+            &hyper::Method::GET => Method::GET,
+            &hyper::Method::POST => Method::POST,
+            &hyper::Method::PUT => Method::PUT,
+            &hyper::Method::DELETE => Method::DELETE,
+            _ => Method::UNSUPPORTED,
+        }
+    }
+}
+
 pub enum RouteResult<T> {
     NotFound,
     MethodNotAllowed,
@@ -83,7 +95,7 @@ impl<T> RouteResult<T> {
     }
 }
 
-pub trait Handler: 'static {
+pub trait Handler: Sync + Send + 'static {
     fn call(&self);
 }
 
@@ -273,7 +285,7 @@ impl Router {
 /// ```
 impl<Func> Handler for Func
 where
-    Func: Fn() + 'static,
+    Func: Fn() + Send + Sync + 'static,
 {
     fn call(&self) {
         (self)();
