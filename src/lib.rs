@@ -1,14 +1,15 @@
 mod handler;
-mod middleware;
 mod node;
 mod router;
 mod server;
 
 pub use handler::Handler;
-pub use middleware::Middleware;
 pub use node::Node;
 pub use router::{Method, Route, RouteResult, Router};
 pub use server::Server;
+
+pub type Request = hyper::Request<hyper::Body>;
+pub type Response = hyper::Response<hyper::Body>;
 
 /// Creates a new server to process requests on a protocol.
 ///

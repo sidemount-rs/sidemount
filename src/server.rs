@@ -5,10 +5,10 @@ use std::task::{Context, Poll};
 
 use hyper::server::conn::Http;
 use hyper::service::Service;
-use hyper::{Body, Request, Response};
+use hyper::Body;
 use tokio::net::{TcpListener, ToSocketAddrs};
 
-use crate::{Middleware, Route, RouteResult, Router};
+use crate::{Handler, Request, Response, Route, RouteResult, Router};
 
 pub struct Server {
     router: Arc<Router>,
@@ -31,7 +31,7 @@ impl Server {
 
     /// Mounts a handler implementation as middleware to be optionally executed with
     /// each of the routes once a route has been found.
-    pub fn mount(&mut self, handler: impl Middleware) {
+    pub fn mount(&mut self, handler: impl Handler) {
         let router =
             Arc::get_mut(&mut self.router).expect("Cannot mount router after binding to listener");
         router.mount(handler);
@@ -65,8 +65,8 @@ impl Server {
     }
 }
 
-impl Service<Request<Body>> for Server {
-    type Response = Response<Body>;
+impl Service<Request> for Server {
+    type Response = Response;
     type Error = hyper::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
@@ -74,18 +74,21 @@ impl Service<Request<Body>> for Server {
         Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, req: Request<Body>) -> Self::Future {
+    fn call(&mut self, req: Request) -> Self::Future {
         let path = req.uri().path();
         let res = match self.router.find(path, req.method().into()) {
             RouteResult::Found(r) => {
                 r.call();
-                Response::builder().status(200).body(Body::empty()).unwrap()
+                hyper::Response::builder()
+                    .status(200)
+                    .body(Body::empty())
+                    .unwrap()
             }
-            RouteResult::NotFound => Response::builder()
+            RouteResult::NotFound => hyper::Response::builder()
                 .status(hyper::StatusCode::NOT_FOUND)
                 .body(Body::empty())
                 .unwrap(),
-            RouteResult::MethodNotAllowed => Response::builder()
+            RouteResult::MethodNotAllowed => hyper::Response::builder()
                 .status(hyper::StatusCode::METHOD_NOT_ALLOWED)
                 .body(Body::empty())
                 .unwrap(),

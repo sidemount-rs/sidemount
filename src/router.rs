@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{Handler, Middleware, Node};
+use crate::{Handler, Node};
 
 #[derive(PartialEq, Eq, Hash)]
 pub enum Method {
@@ -132,7 +132,7 @@ impl Route {
 /// Represents a router that can build and handle [Route] handler implementations.
 pub struct Router {
     route: Node<Route>,
-    middleware: Arc<Vec<Arc<dyn Middleware>>>,
+    middleware: Arc<Vec<Arc<dyn Handler>>>,
 }
 
 impl Router {
@@ -181,7 +181,7 @@ impl Router {
     /// router.mount((test, test2));
     /// router.at("/foo").get(index);
     /// ```
-    pub fn mount(&mut self, handler: impl Middleware) {
+    pub fn mount(&mut self, handler: impl Handler) {
         if let Some(mid) = Arc::get_mut(&mut self.middleware) {
             mid.push(Arc::new(handler));
         }
