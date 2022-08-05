@@ -46,6 +46,16 @@ pub enum Method {
     /// associated information be deleted.
     /// [ref](https://httpwg.org/specs/rfc7231.html#DELETE)
     DELETE,
+    /// The HEAD method is identical to GET except that the server MUST NOT send a
+    /// message body in the response (i.e., the response terminates at the end of
+    /// the header section). The server SHOULD send the same header fields in response
+    /// to a HEAD request as it would have sent if the request had been a GET, except
+    /// that the payload header fields (Section 3.3) MAY be omitted. This method can
+    /// be used for obtaining metadata about the selected representation without
+    /// transferring the representation data and is often used for testing hypertext
+    /// links for validity, accessibility, and recent modification.
+    /// [ref](https://httpwg.org/specs/rfc7231.html#HEAD)
+    HEAD,
     UNSUPPORTED,
 }
 
@@ -56,6 +66,7 @@ impl From<&str> for Method {
             "POST" => Method::POST,
             "PUT" => Method::PUT,
             "DELETE" => Method::DELETE,
+            "HEAD" => Method::HEAD,
             _ => Method::UNSUPPORTED,
         }
     }
@@ -68,6 +79,7 @@ impl From<&hyper::Method> for Method {
             &hyper::Method::POST => Method::POST,
             &hyper::Method::PUT => Method::PUT,
             &hyper::Method::DELETE => Method::DELETE,
+            &hyper::Method::HEAD => Method::HEAD,
             _ => Method::UNSUPPORTED,
         }
     }
@@ -132,7 +144,6 @@ impl Route {
 /// Represents a router that can build and handle [Route] handler implementations.
 pub struct Router {
     route: Node<Route>,
-    middleware: Arc<Vec<Arc<dyn Handler>>>,
 }
 
 impl Router {
@@ -140,7 +151,6 @@ impl Router {
     pub fn new() -> Self {
         Router {
             route: Node::default(),
-            middleware: Arc::new(Vec::new()),
         }
     }
 
@@ -163,28 +173,6 @@ impl Router {
         }
 
         self.route.get_mut(path).unwrap()
-    }
-
-    /// Mounts a handler implementation as middleware to be optionally executed with
-    /// each of the routes once a route has been found.
-    ///
-    /// ## Examples
-    ///
-    /// ```rust
-    /// use sidemount::*;
-    ///
-    /// fn test() {}
-    /// fn test2() {}
-    /// fn index() {}
-    ///
-    /// let mut router = Router::new();
-    /// router.mount((test, test2));
-    /// router.at("/foo").get(index);
-    /// ```
-    pub fn mount(&mut self, handler: impl Handler) {
-        if let Some(mid) = Arc::get_mut(&mut self.middleware) {
-            mid.push(Arc::new(handler));
-        }
     }
 
     /// Inserts a route handler for the given path and HTTP method
@@ -268,16 +256,19 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{Request, Response};
 
-    fn tester() {}
+    fn tester(req: Request) -> Response {
+        Response::default()
+    }
 
-    fn tester2() {}
+    fn tester2(req: Request) -> Response {
+        Response::default()
+    }
 
     #[test]
     fn test_router() {
         let mut router = Router::new();
-        router.mount((tester, tester2));
-        router.mount(tester2);
         router.at("/foo/bar").get(tester);
         router.at("/foo/bar/baz").get((tester, tester2));
         router.at("/bah").get((tester, Arc::new(tester2)));

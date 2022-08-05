@@ -29,14 +29,6 @@ impl Server {
         router.at(path)
     }
 
-    /// Mounts a handler implementation as middleware to be optionally executed with
-    /// each of the routes once a route has been found.
-    pub fn mount(&mut self, handler: impl Handler) {
-        let router =
-            Arc::get_mut(&mut self.router).expect("Cannot mount router after binding to listener");
-        router.mount(handler);
-    }
-
     /// Routes a path on the router to an existing router implementation.
     pub fn route(&mut self, path: &str, router: Router) {
         let rt =
