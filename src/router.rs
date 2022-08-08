@@ -1,89 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
+use crate::Method;
 use crate::{Handler, Node};
-
-#[derive(PartialEq, Eq, Hash)]
-pub enum Method {
-    /// The GET method requests transfer of a current selected representation for the
-    /// target resource. GET is the primary mechanism of information retrieval and the
-    /// focus of almost all performance optimizations. Hence, when people speak of
-    /// retrieving some identifiable information via HTTP, they are generally referring
-    /// to making a GET request.
-    /// [ref](https://httpwg.org/specs/rfc7231.html#GET)
-    GET,
-    /// The POST method requests that the target resource process the representation
-    /// enclosed in the request according to the resource's own specific semantics.
-    /// For example, POST is used for the following functions (among others):
-    ///
-    /// * Providing a block of data, such as the fields entered into an HTML form, to a data-handling process;
-    /// * Posting a message to a bulletin board, newsgroup, mailing list, blog, or similar group of articles;
-    /// * Creating a new resource that has yet to be identified by the origin server; and
-    /// * Appending data to a resource's existing representation(s).
-    ///
-    /// An origin server indicates response semantics by choosing an appropriate status
-    /// code depending on the result of processing the POST request; almost all of the
-    /// status codes defined by this specification might be received in a response to
-    /// POST (the exceptions being 206 (Partial Content), 304 (Not Modified), and
-    /// 416 (Range Not Satisfiable)).
-    /// [ref](https://httpwg.org/specs/rfc7231.html#POST)
-    POST,
-    /// The PUT method requests that the state of the target resource be created or
-    /// replaced with the state defined by the representation enclosed in the request
-    /// message payload. A successful PUT of a given representation would suggest that
-    /// a subsequent GET on that same target resource will result in an equivalent
-    /// representation being sent in a 200 (OK) response. However, there is no guarantee
-    /// that such a state change will be observable, since the target resource might be
-    /// acted upon by other user agents in parallel, or might be subject to dynamic
-    /// processing by the origin server, before any subsequent GET is received. A
-    /// successful response only implies that the user agent's intent was achieved at
-    /// the time of its processing by the origin server.
-    /// [ref](https://httpwg.org/specs/rfc7231.html#PUT)
-    PUT,
-    /// The DELETE method requests that the origin server remove the association between
-    /// the target resource and its current functionality. In effect, this method is
-    /// similar to the rm command in UNIX: it expresses a deletion operation on the URI
-    /// mapping of the origin server rather than an expectation that the previously
-    /// associated information be deleted.
-    /// [ref](https://httpwg.org/specs/rfc7231.html#DELETE)
-    DELETE,
-    /// The HEAD method is identical to GET except that the server MUST NOT send a
-    /// message body in the response (i.e., the response terminates at the end of
-    /// the header section). The server SHOULD send the same header fields in response
-    /// to a HEAD request as it would have sent if the request had been a GET, except
-    /// that the payload header fields (Section 3.3) MAY be omitted. This method can
-    /// be used for obtaining metadata about the selected representation without
-    /// transferring the representation data and is often used for testing hypertext
-    /// links for validity, accessibility, and recent modification.
-    /// [ref](https://httpwg.org/specs/rfc7231.html#HEAD)
-    HEAD,
-    UNSUPPORTED,
-}
-
-impl From<&str> for Method {
-    fn from(method: &str) -> Self {
-        match method {
-            "GET" => Method::GET,
-            "POST" => Method::POST,
-            "PUT" => Method::PUT,
-            "DELETE" => Method::DELETE,
-            "HEAD" => Method::HEAD,
-            _ => Method::UNSUPPORTED,
-        }
-    }
-}
-
-impl From<&hyper::Method> for Method {
-    fn from(m: &hyper::Method) -> Self {
-        match m {
-            &hyper::Method::GET => Method::GET,
-            &hyper::Method::POST => Method::POST,
-            &hyper::Method::PUT => Method::PUT,
-            &hyper::Method::DELETE => Method::DELETE,
-            &hyper::Method::HEAD => Method::HEAD,
-            _ => Method::UNSUPPORTED,
-        }
-    }
-}
 
 pub enum RouteResult<T> {
     NotFound,
@@ -256,26 +174,30 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Request, Response};
+    use crate::{func, Request, Response};
 
-    fn tester(req: Request) -> Response {
+    fn test(req: Request) -> Response {
         Response::default()
     }
 
-    fn tester2(req: Request) -> Response {
+    fn tester(req: Request) -> i32 {
+        3
+    }
+
+    fn tester2(a: i32) -> Response {
         Response::default()
     }
 
     #[test]
     fn test_router() {
         let mut router = Router::new();
-        router.at("/foo/bar").get(tester);
-        router.at("/foo/bar/baz").get((tester, tester2));
-        router.at("/bah").get((tester, Arc::new(tester2)));
+        router.at("/foo/bar").get(test);
+        router.at("/foo/bar/baz").get(func!(tester, tester2));
+        router.at("/bah").get(func!(tester, tester2));
 
         let mut sub_router = Router::new();
-        sub_router.at("/bleh").get(tester);
-        sub_router.at("/foo/bar").post(tester);
+        sub_router.at("/bleh").get(test);
+        sub_router.at("/foo/bar").post(test);
         router.route("/hi", sub_router);
 
         assert!(router.find("/hi/bleh", Method::GET).is_found());
