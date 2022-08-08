@@ -8,7 +8,7 @@ use hyper::service::Service;
 use hyper::Body;
 use tokio::net::{TcpListener, ToSocketAddrs};
 
-use crate::{Handler, Request, Response, Route, RouteResult, Router};
+use crate::{Request, Response, Route, RouteResult, Router};
 
 pub struct Server {
     router: Arc<Router>,
@@ -69,13 +69,7 @@ impl Service<Request> for Server {
     fn call(&mut self, req: Request) -> Self::Future {
         let path = req.uri().path();
         let res = match self.router.find(path, req.method().into()) {
-            RouteResult::Found(r) => {
-                r.call();
-                hyper::Response::builder()
-                    .status(200)
-                    .body(Body::empty())
-                    .unwrap()
-            }
+            RouteResult::Found(r) => (r)(req),
             RouteResult::NotFound => hyper::Response::builder()
                 .status(hyper::StatusCode::NOT_FOUND)
                 .body(Body::empty())

@@ -15,7 +15,7 @@ pub type Request = hyper::Request<hyper::Body>;
 pub type Response = hyper::Response<hyper::Body>;
 pub type Result<T> = hyper::Result<T>;
 pub type Method = hyper::Method;
-pub trait Handler = Fn(Request) -> Response;
+pub trait Handler = Send + Sync + 'static + Fn(Request) -> Response;
 
 /// Creates a new server to process requests on a protocol.
 ///
