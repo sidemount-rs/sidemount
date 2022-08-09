@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug)]
 pub struct Node<T> {
     pub nodes: Vec<Node<T>>,
@@ -120,6 +122,45 @@ impl<T> Node<T> {
             None => {
                 let node = self.nodes.iter().find(|m| path == &m.key || m.wildcard);
                 if let Some(node) = node {
+                    node.handler.as_ref()
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// Gets a borrowed reference to the handler along the path
+    pub fn get_params(&self, path: &str, params: &mut HashMap<String, String>) -> Option<&T> {
+        match path.split_once('/') {
+            Some((root, "")) => {
+                if root == &self.key || self.wildcard {
+                    if self.wildcard {
+                        params.insert(self.key.clone(), root.to_owned());
+                    }
+                    self.handler.as_ref()
+                } else {
+                    None
+                }
+            }
+            Some(("", path)) => self.get(path),
+            Some((root, path)) => {
+                let node = self.nodes.iter().find(|m| root == &m.key || m.wildcard);
+                if let Some(node) = node {
+                    if node.wildcard {
+                        params.insert(node.key.clone(), root.to_owned());
+                    }
+                    node.get_params(path, params)
+                } else {
+                    None
+                }
+            }
+            None => {
+                let node = self.nodes.iter().find(|m| path == &m.key || m.wildcard);
+                if let Some(node) = node {
+                    if node.wildcard {
+                        params.insert(node.key.clone(), path.to_owned());
+                    }
                     node.handler.as_ref()
                 } else {
                     None

@@ -11,6 +11,7 @@ use std::future::Future;
 
 use async_trait::async_trait;
 
+use func::{Func, Function};
 pub use node::Node;
 pub use router::{Route, RouteResult, Router};
 pub use server::Server;

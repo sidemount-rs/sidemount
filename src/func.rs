@@ -198,34 +198,6 @@ where
 
 pub struct Function<F, T>(pub F, pub std::marker::PhantomData<T>);
 
-impl<F, Args, T> Fn<Args> for Function<F, T>
-where
-    F: Func<Args, T>,
-{
-    extern "rust-call" fn call(&self, args: Args) -> Self::Output {
-        self.0.call(args)
-    }
-}
-
-impl<F, Args, T> FnMut<Args> for Function<F, T>
-where
-    F: Func<Args, T>,
-{
-    extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output {
-        self.0.call(args)
-    }
-}
-
-impl<F, Args, T> FnOnce<Args> for Function<F, T>
-where
-    F: Func<Args, T>,
-{
-    type Output = F::Output;
-    extern "rust-call" fn call_once(self, args: Args) -> Self::Output {
-        self.0.call(args)
-    }
-}
-
 #[macro_export]
 macro_rules! compose {
     ( $last:expr ) => { $last };

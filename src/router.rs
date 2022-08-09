@@ -156,12 +156,17 @@ impl Router {
     /// assert!(router.find("/foo", Method::GET).is_found());
     /// assert!(router.find("/foo", Method::POST).is_not_allowed());
     /// ```
-    pub fn find(&self, path: &str, method: Method) -> RouteResult<&dyn Handler> {
-        if let Some(node) = self.route.get(path) {
+    pub fn find(
+        &self,
+        path: &str,
+        method: Method,
+    ) -> RouteResult<(&dyn Handler, HashMap<String, String>)> {
+        let mut params = HashMap::new();
+        if let Some(node) = self.route.get_params(path, &mut params) {
             if let Some(handler) = &node._all {
-                RouteResult::Found(&**handler)
+                RouteResult::Found((&**handler, params))
             } else if let Some(handler) = node.methods.get(&method) {
-                RouteResult::Found(&**handler)
+                RouteResult::Found((&**handler, params))
             } else {
                 RouteResult::MethodNotAllowed
             }
@@ -174,7 +179,7 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{func, Request, Response};
+    use crate::{Request, Response};
 
     async fn test(req: Request) -> Response {
         Response::default()
@@ -192,8 +197,9 @@ mod tests {
     fn test_router() {
         let mut router = Router::new();
         router.at("/foo/bar").get(test);
-        router.at("/foo/bar/baz").get(func!(tester, tester2));
-        router.at("/bah").get(func!(tester, tester2));
+
+        // router.at("/foo/bar/baz").get(tester);
+        //router.at("/bah").get(func!(tester, tester2));
 
         let mut sub_router = Router::new();
         sub_router.at("/bleh").get(test);
