@@ -7,6 +7,10 @@ mod node;
 mod router;
 mod server;
 
+use std::future::Future;
+
+use async_trait::async_trait;
+
 pub use node::Node;
 pub use router::{Route, RouteResult, Router};
 pub use server::Server;
@@ -15,7 +19,22 @@ pub type Request = hyper::Request<hyper::Body>;
 pub type Response = hyper::Response<hyper::Body>;
 pub type Result<T> = hyper::Result<T>;
 pub type Method = hyper::Method;
-pub trait Handler = Send + Sync + 'static + Fn(Request) -> Response;
+
+#[async_trait]
+pub trait Handler: Send + Sync + 'static {
+    async fn call(&self, req: Request) -> Response;
+}
+
+#[async_trait]
+impl<F, Fut> Handler for F
+where
+    F: Send + Sync + 'static + Fn(Request) -> Fut,
+    Fut: Future<Output = Response> + Send,
+{
+    async fn call(&self, req: Request) -> Response {
+        (self)(req).await
+    }
+}
 
 /// Creates a new server to process requests on a protocol.
 ///

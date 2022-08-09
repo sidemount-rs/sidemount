@@ -1,14 +1,18 @@
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::{Context, Poll};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
+};
 
-use hyper::server::conn::Http;
-use hyper::service::Service;
 use hyper::Body;
+use hyper::{server::conn::Http, service::Service};
 use tokio::net::{TcpListener, ToSocketAddrs};
 
 use crate::{Request, Response, Route, RouteResult, Router};
+
+type GenericError = Box<dyn std::error::Error + Send + Sync>;
+type Result<T> = std::result::Result<T, GenericError>;
 
 pub struct Server {
     router: Arc<Router>,
@@ -37,10 +41,7 @@ impl Server {
     }
 
     /// Executes a listener on a given listener type.
-    pub async fn listen<T: ToSocketAddrs>(
-        self,
-        addr: T,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn listen<T: ToSocketAddrs>(self, addr: T) -> Result<()> {
         let listener = TcpListener::bind(addr).await?;
         loop {
             let (stream, _) = listener.accept().await?;
@@ -60,26 +61,28 @@ impl Server {
 impl Service<Request> for Server {
     type Response = Response;
     type Error = hyper::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future =
+        Pin<Box<dyn Future<Output = std::result::Result<Self::Response, Self::Error>> + Send>>;
 
-    fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&mut self, _: &mut Context) -> Poll<std::result::Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
     }
 
     fn call(&mut self, req: Request) -> Self::Future {
-        let path = req.uri().path();
-        let res = match self.router.find(path, req.method().into()) {
-            RouteResult::Found(r) => (r)(req),
-            RouteResult::NotFound => hyper::Response::builder()
-                .status(hyper::StatusCode::NOT_FOUND)
-                .body(Body::empty())
-                .unwrap(),
-            RouteResult::MethodNotAllowed => hyper::Response::builder()
-                .status(hyper::StatusCode::METHOD_NOT_ALLOWED)
-                .body(Body::empty())
-                .unwrap(),
-        };
-
-        Box::pin(async { Ok(res) })
+        let router = self.router.clone();
+        Box::pin(async move {
+            let res = match router.find(req.uri().path(), req.method().into()) {
+                RouteResult::Found(r) => r.call(req).await,
+                RouteResult::NotFound => hyper::Response::builder()
+                    .status(hyper::StatusCode::NOT_FOUND)
+                    .body(Body::empty())
+                    .unwrap(),
+                RouteResult::MethodNotAllowed => hyper::Response::builder()
+                    .status(hyper::StatusCode::METHOD_NOT_ALLOWED)
+                    .body(Body::empty())
+                    .unwrap(),
+            };
+            Ok(res)
+        })
     }
 }

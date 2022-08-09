@@ -176,15 +176,15 @@ mod tests {
     use super::*;
     use crate::{func, Request, Response};
 
-    fn test(req: Request) -> Response {
+    async fn test(req: Request) -> Response {
         Response::default()
     }
 
-    fn tester(req: Request) -> i32 {
+    async fn tester(req: Request) -> i32 {
         3
     }
 
-    fn tester2(a: i32) -> Response {
+    async fn tester2(a: i32) -> Response {
         Response::default()
     }
 

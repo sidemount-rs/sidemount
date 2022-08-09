@@ -1,3 +1,5 @@
+use sidemount::{Request, Response};
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut app = sidemount::new();
@@ -7,6 +9,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     Ok(())
 }
 
-fn hello() {
-    println!("hello world!");
+fn hello(_req: Request) -> Response {
+    Response::default()
 }
