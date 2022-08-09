@@ -72,7 +72,10 @@ impl Service<Request> for Server {
         let router = self.router.clone();
         Box::pin(async move {
             let res = match router.find(req.uri().path(), req.method().into()) {
-                RouteResult::Found(r) => r.0.call(req).await,
+                RouteResult::Found(r) => {
+                    let (handler, params) = r;
+                    handler.call(Request::new(req, params)).await
+                }
                 RouteResult::NotFound => hyper::Response::builder()
                     .status(hyper::StatusCode::NOT_FOUND)
                     .body(Body::empty())

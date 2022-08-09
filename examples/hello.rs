@@ -1,7 +1,7 @@
-use sidemount::{Request, Response};
+use sidemount::{Request, Response, Result};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<()> {
     let mut app = sidemount::new();
     app.at("/foo").get(hello);
     app.listen("127.0.0.1:7000").await?;
@@ -9,6 +9,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     Ok(())
 }
 
-fn hello(_req: Request) -> Response {
+async fn hello(req: Request) -> Response {
     Response::default()
 }
