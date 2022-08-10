@@ -20,7 +20,7 @@ impl Request {
         self.req.uri().path()
     }
 
-    pub fn param(&self, key: &str) -> Option<String> {
+    pub fn param(&self, key: &str) -> Option<&String> {
         self.params.get(key)
     }
 }

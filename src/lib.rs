@@ -1,8 +1,10 @@
 #![feature(unboxed_closures)]
 #![feature(fn_traits)]
 #![feature(trait_alias)]
+#![feature(try_trait_v2)]
 
 mod handler;
+mod middleware;
 mod node;
 mod request;
 mod response;
@@ -10,6 +12,7 @@ mod router;
 mod server;
 
 pub use handler::Handler;
+pub use middleware::{Middleware, Next};
 pub use node::Node;
 pub use request::Request;
 pub use response::Response;

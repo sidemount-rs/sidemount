@@ -30,7 +30,7 @@ where
     T: Send,
 {
     async fn call(&self, req: Request) -> Response {
-        let (a, b) = *self;
+        let (a, b) = self;
         let res = (a)(req).await;
         (b)(res).await
     }
@@ -49,7 +49,7 @@ where
     T2: Send,
 {
     async fn call(&self, req: Request) -> Response {
-        let (a, b, c) = *self;
+        let (a, b, c) = self;
         let res = (a)(req).await;
         let res = (b)(res).await;
         (c)(res).await
@@ -72,7 +72,7 @@ where
     T3: Send,
 {
     async fn call(&self, req: Request) -> Response {
-        let (a, b, c, d) = *self;
+        let (a, b, c, d) = self;
         let res = (a)(req).await;
         let res = (b)(res).await;
         let res = (c)(res).await;
@@ -99,7 +99,7 @@ where
     T4: Send,
 {
     async fn call(&self, req: Request) -> Response {
-        let (a, b, c, d, e) = *self;
+        let (a, b, c, d, e) = self;
         let res = (a)(req).await;
         let res = (b)(res).await;
         let res = (c)(res).await;
@@ -131,7 +131,7 @@ where
     T5: Send,
 {
     async fn call(&self, req: Request) -> Response {
-        let (a, b, c, d, e, f) = *self;
+        let (a, b, c, d, e, f) = self;
         let res = (a)(req).await;
         let res = (b)(res).await;
         let res = (c)(res).await;

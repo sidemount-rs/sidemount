@@ -160,13 +160,13 @@ impl Router {
         &self,
         path: &str,
         method: Method,
-    ) -> RouteResult<(&dyn Handler, HashMap<String, String>)> {
+    ) -> RouteResult<(Arc<dyn Handler>, HashMap<String, String>)> {
         let mut params = HashMap::new();
         if let Some(node) = self.route.get_params(path, &mut params) {
             if let Some(handler) = &node._all {
-                RouteResult::Found((&**handler, params))
+                RouteResult::Found((handler.clone(), params))
             } else if let Some(handler) = node.methods.get(&method) {
-                RouteResult::Found((&**handler, params))
+                RouteResult::Found((handler.clone(), params))
             } else {
                 RouteResult::MethodNotAllowed
             }

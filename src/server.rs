@@ -9,12 +9,13 @@ use hyper::Body;
 use hyper::{server::conn::Http, service::Service};
 use tokio::net::{TcpListener, ToSocketAddrs};
 
-use crate::{Request, Response, Route, RouteResult, Router};
+use crate::{http, Middleware, Next, Request, Response, Route, RouteResult, Router};
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type Result<T> = std::result::Result<T, GenericError>;
 
 pub struct Server {
+    middleware: Arc<Vec<Arc<dyn Middleware>>>,
     router: Arc<Router>,
 }
 
@@ -22,8 +23,16 @@ impl Server {
     /// Creates a new server and default router.
     pub fn new() -> Self {
         Server {
+            middleware: Arc::new(Vec::new()),
             router: Arc::new(Router::new()),
         }
+    }
+
+    /// Mounts middleware implementation to the server.
+    pub fn mount(&mut self, mid: impl Middleware) {
+        let middleware = Arc::get_mut(&mut self.middleware)
+            .expect("Cannot mount middleware after binding to listener");
+        middleware.push(Arc::new(mid));
     }
 
     /// Creates a new node node or returns a mutable reference to an existing one.
@@ -47,6 +56,7 @@ impl Server {
             let (stream, _) = listener.accept().await?;
 
             let server = Server {
+                middleware: self.middleware.clone(),
                 router: self.router.clone(),
             };
             tokio::task::spawn(async move {
@@ -58,8 +68,8 @@ impl Server {
     }
 }
 
-impl Service<Request> for Server {
-    type Response = Response;
+impl Service<http::Request> for Server {
+    type Response = http::Response;
     type Error = hyper::Error;
     type Future =
         Pin<Box<dyn Future<Output = std::result::Result<Self::Response, Self::Error>> + Send>>;
@@ -68,13 +78,16 @@ impl Service<Request> for Server {
         Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, req: Request) -> Self::Future {
+    fn call(&mut self, req: http::Request) -> Self::Future {
         let router = self.router.clone();
+        let middleware = self.middleware.clone();
         Box::pin(async move {
             let res = match router.find(req.uri().path(), req.method().into()) {
                 RouteResult::Found(r) => {
                     let (handler, params) = r;
-                    handler.call(Request::new(req, params)).await
+                    let req = Request::new(req, params);
+                    let next = Next::new(middleware, handler);
+                    next.run(req).await.into()
                 }
                 RouteResult::NotFound => hyper::Response::builder()
                     .status(hyper::StatusCode::NOT_FOUND)
