@@ -2,17 +2,14 @@
 #![feature(fn_traits)]
 #![feature(trait_alias)]
 
-mod func;
+mod handler;
 mod node;
 mod request;
 mod response;
 mod router;
 mod server;
 
-use std::future::Future;
-
-use async_trait::async_trait;
-
+pub use handler::Handler;
 pub use node::Node;
 pub use request::Request;
 pub use response::Response;
@@ -26,22 +23,6 @@ pub mod http {
 }
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type Method = http::Method;
-
-#[async_trait]
-pub trait Handler: Send + Sync + 'static {
-    async fn call(&self, req: Request) -> Response;
-}
-
-#[async_trait]
-impl<F, Fut> Handler for F
-where
-    F: Send + Sync + 'static + Fn(Request) -> Fut,
-    Fut: Future<Output = Response> + Send,
-{
-    async fn call(&self, req: Request) -> Response {
-        (self)(req).await
-    }
-}
 
 /// Creates a new server to process requests on a protocol.
 ///

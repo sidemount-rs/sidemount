@@ -193,13 +193,22 @@ mod tests {
         Response::default()
     }
 
+    async fn test3(a: i32) -> String {
+        a.to_string()
+    }
+
+    async fn test4(s: String) -> Response {
+        Response::default()
+    }
+
     #[test]
     fn test_router() {
         let mut router = Router::new();
         router.at("/foo/bar").get(test);
 
-        // router.at("/foo/bar/baz").get(tester);
-        //router.at("/bah").get(func!(tester, tester2));
+        router.at("/foo/bar/baz").get((tester, tester2));
+        router.at("/bah").get((tester, tester2));
+        router.at("/boo").get((tester, test3, test4));
 
         let mut sub_router = Router::new();
         sub_router.at("/bleh").get(test);
