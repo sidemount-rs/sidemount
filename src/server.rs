@@ -9,7 +9,7 @@ use hyper::Body;
 use hyper::{server::conn::Http, service::Service};
 use tokio::net::{TcpListener, ToSocketAddrs};
 
-use crate::{http, Middleware, Next, Request, Response, Route, RouteResult, Router};
+use crate::{http, Middleware, Next, Request, Route, RouteResult, Router};
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type Result<T> = std::result::Result<T, GenericError>;
@@ -43,7 +43,7 @@ impl Server {
     }
 
     /// Routes a path on the router to an existing router implementation.
-    pub fn route(&mut self, path: &str, router: Router) {
+    pub fn route(&mut self, path: &str, router: impl Into<Router>) {
         let rt =
             Arc::get_mut(&mut self.router).expect("Cannot mount router after binding to listener");
         rt.route(path, router);

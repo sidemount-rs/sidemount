@@ -147,29 +147,6 @@ impl Router {
         self.route.insert_node(path, router.into().route);
     }
 
-    /// Routes a path on the router to a vec of router implementations.
-    ///
-    /// ## Examples
-    ///
-    /// ```rust
-    /// use sidemount::*;
-    ///
-    /// fn foo() {}
-    /// fn bar() {}
-    ///
-    /// let mut test = Router::new();
-    /// test.at("/foo").get(foo);
-    ///
-    /// let mut test2 = Router::new();
-    /// test2.at("/bar").get(bar);
-    /// router.routes("/", vec![test, test2]);
-    /// ```
-    pub fn routes(&mut self, path: &str, routers: Vec<dyn Into<Router>>) {
-        for route in routers {
-            self.route(path, route);
-        }
-    }
-
     /// Finds a route result along the given path and method.
     ///
     /// ## Examples
