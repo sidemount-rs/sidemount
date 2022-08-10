@@ -2,41 +2,30 @@
 🏕 sidemount 🤿 🏝⏛ is a streamlined http/web toolkit designed for building async network apps in Rust 🦀
 
 ```rust
-fn authorize(req: Request) -> Result<Request> {
-    if !req.is_authenticated() {
-        req.unauthorized()
-    } else {
-        Ok(req)
-    }
+#[get("/{username}")]
+fn posts(req: Request) -> Response {
+    Response::default()
 }
 
-fn user_request(req: Request) -> Result<(User, String, Db<Post>)> {
-    let user_id = req.param("id");
-    let user = // look up user by id
-    let post_id = req.param("post_id");
-    Ok((user, post_id, db.posts()))
+#[get("/")]
+fn index(req: Request) -> Response {
+    Response::default()
 }
 
-fn user_rbac<T>(user: User, id: String, model: Db<T>) -> Result<(User, T)> {
-    // rbac rule on id
-    Ok((user, model))
+#[get("/settings")]
+fn settings(req: Request) -> Response {
+    Response::default()
 }
 
-fn index(user: User, post: Post) -> Result<Template> {
-    // guarantee parameters or bad request
-}
-
-fn template(template: Template) -> Result<Response> {
-    // modify template and render as such
+fn explore(req: Request) -> Response {
+    Response::default()
 }
 
 #[tokio::main]
 async fn main() {
     let mut app = sidemount::new();
-    app.mount(authorize);
-    app.mount(user_request);
-    app.at("/foo").get((user_rbac, index, template));
-
+    app.route("/", routes![index, settings, posts]);
+    app.at("/explore").get(explore);
     app.listen("127.0.0.1:7000").await
 }
 ```
