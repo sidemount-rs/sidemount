@@ -64,6 +64,15 @@ pub struct Router {
     route: Node<Route>,
 }
 
+impl<F> From<F> for Router
+where
+    F: Fn() -> Router,
+{
+    fn from(f: F) -> Self {
+        f()
+    }
+}
+
 impl Router {
     /// Creates a new router with the default route and middleware
     pub fn new() -> Self {
@@ -134,8 +143,31 @@ impl Router {
     ///
     /// router.route("/admin", manager);
     /// ```
-    pub fn route(&mut self, path: &str, router: Router) {
-        self.route.insert_node(path, router.route);
+    pub fn route(&mut self, path: &str, router: impl Into<Router>) {
+        self.route.insert_node(path, router.into().route);
+    }
+
+    /// Routes a path on the router to a vec of router implementations.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// use sidemount::*;
+    ///
+    /// fn foo() {}
+    /// fn bar() {}
+    ///
+    /// let mut test = Router::new();
+    /// test.at("/foo").get(foo);
+    ///
+    /// let mut test2 = Router::new();
+    /// test2.at("/bar").get(bar);
+    /// router.routes("/", vec![test, test2]);
+    /// ```
+    pub fn routes(&mut self, path: &str, routers: Vec<dyn Into<Router>>) {
+        for route in routers {
+            self.route(path, route);
+        }
     }
 
     /// Finds a route result along the given path and method.
@@ -181,8 +213,14 @@ mod tests {
     use super::*;
     use crate::{Request, Response};
 
-    async fn test(req: Request) -> Response {
-        Response::default()
+    fn test() -> Router {
+        async fn test(req: Request) -> Response {
+            Response::default()
+        }
+
+        let mut router = Router::new();
+        router.at("/foo/bar").get(test);
+        router
     }
 
     async fn tester(req: Request) -> i32 {
@@ -204,6 +242,7 @@ mod tests {
     #[test]
     fn test_router() {
         let mut router = Router::new();
+        router.route("/", test);
         router.at("/foo/bar").get(test);
 
         router.at("/foo/bar/baz").get((tester, tester2));
